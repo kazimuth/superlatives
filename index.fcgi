@@ -46,6 +46,36 @@ def superlatives():
 def superlative():
     pass
 
+# ORM
+from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy.ext.declarative import declarative_base
+
+Base = declarative_base()
+
+class Person(Base):
+    __tablename__ = 'people'
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    kerberos = Column(String)
+
+class Superlative(Base):
+    __tablename__ = 'superlatives'
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    slots = Column(Integer)
+
+class Vote(Base):
+    __tablename__ = 'votes'
+    id = Column(Integer, primary_key=True)
+    superlative = Column(Integer, ForeignKey('superlatives.id'))
+
+class Entry(Base):
+    __tablename__ = 'entries'
+    id = Column(Integer, primary_key=True)
+    vote = Column(Integer, ForeignKey('votes.id'))
+    person = Column(Integer, ForeignKey('people.id'))
+    slot = Column(Integer)
+
 def die_on_change():
     import os.path
     import sys
