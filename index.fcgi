@@ -5,9 +5,21 @@ from threading import Thread
 from flup.server.fcgi import WSGIServer
 from flask import Flask, redirect, render_template
 from flask.ext.sqlalchemy import SQLAlchemy
+from sqlalchemy.engine.url import URL
+
+def get_mysql_url():
+    from ConfigParser import RawConfigParser
+    sql_ini_fileparser = RawConfigParser()
+    sql_ini_fileparser.read('../.sql/my.cnf')
+    user = sql_ini_fileparser.get('client', 'user')
+    password = sql_ini_fileparser.get('client', 'password')
+    return 'mysql://{}:{}@sql.mit.edu/superlatives'.format(user, password)
 
 app = Flask(__name__)
 app.debug = True
+app.config['SQLALCHEMY_DATABASE_URL'] = get_mysql_url()
+
+db = SQLAlchemy(app)
 
 @app.route('/superlatives')
 def main_page():
@@ -26,11 +38,11 @@ def person():
     pass
 
 @app.route('/api/superlatives')
-def list_superlatives():
+def superlatives():
     return '[{"id": 0, "superlative": "Most Hacky", "slots": 1}, {"id": 1, "superlative": "Most Likely to end up Starving in a Lifeboat", "slots": 4}]'
 
 @app.route('/api/superlative', methods=['POST'])
-def person():
+def superlative():
     pass
 
 def die_on_change():
