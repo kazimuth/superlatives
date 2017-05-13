@@ -14,7 +14,6 @@ import base64
 from flup.server.fcgi import WSGIServer
 from flask import Flask, session, redirect, render_template
 from flask_sqlalchemy import SQLAlchemy
-from flask_oidc import OpenIDConnect
 
 # to satisy pylint
 request = None
@@ -25,13 +24,11 @@ def log(fmt, *args):
 
 with open('secrets/secrets.json') as sf:
     data = json.load(sf)
-    print(data)
     SQL_USER = data['sql_user']
     SQL_PASS = data['sql_pass']
     FLASK_SECRET_KEY = data['secret_key']
 with open('secrets/client_secrets.json') as sf:
     data = json.load(sf)
-    print(data)
     CLIENT_ID = data['web']['client_id']
     CLIENT_SECRET = data['web']['client_secret']
 
@@ -61,8 +58,7 @@ def rndstr():
 
 @app.route('/login')
 def login_page():
-    pass
-
+    return 'nice meme benbo'
 
 @app.route('/api/people')
 def people():
