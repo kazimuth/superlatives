@@ -24,7 +24,8 @@ db = SQLAlchemy(app)
 
 @app.route('/superlatives')
 def main_page():
-    return render_template('superlatives.html')
+    return render_template('superlatives.html', people=[{'id': 0, 'kerberos': 'shreyask', 'name': "Shreyas Kapur"},
+                                                        {'id': 1,' kerberos': 'ban', 'name': "Chetan Sharma"}])
 
 @app.route('/')
 def index():

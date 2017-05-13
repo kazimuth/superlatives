@@ -5,10 +5,23 @@
 	<title>superlatives &middot; πτz</title>
 	<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.2.10/semantic.min.css">
 	<link rel="stylesheet" href="/static/style.css">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 </head>
 <body>
+	<h1 class="centered">πτz Superlatives</h1>
 	
-	<script src="//cdnjs.cloudflare.com/ajax/libs/zepto/1.2.0/zepto.min.js"></script>
+	<div class="sup-container">
+		<h4 class="centered sup">Most Hacky</h4>
+		<select class="ui search dropdown">
+			{{ for p in people }}
+				<option value="{{ p.id }}">{{ p.Name }} ({{ p.kerberos }})</option>
+			{{ endfor }}
+		</select>
+	</div>
+
+
+	<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
 	<script src="//cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.2.10/semantic.min.js"></script>
 	<script src="/static/app.js"></script>
 </body>
