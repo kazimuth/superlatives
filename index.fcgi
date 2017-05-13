@@ -4,7 +4,7 @@ from threading import Thread
 
 from flup.server.fcgi import WSGIServer
 from flask import Flask, redirect, render_template
-from flask.ext.sqlalchemy import SQLAlchemy
+from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.engine.url import URL
 
 def get_mysql_url():
@@ -17,7 +17,8 @@ def get_mysql_url():
 
 app = Flask(__name__)
 app.debug = True
-app.config['SQLALCHEMY_DATABASE_URL'] = get_mysql_url()
+app.config['SQLALCHEMY_DATABASE_URI'] = get_mysql_url()
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
