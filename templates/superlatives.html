@@ -14,9 +14,9 @@
 	<div class="sup-container">
 		<h4 class="centered sup">Most Hacky</h4>
 		<select class="ui search dropdown">
-			{{ for p in people }}
+			{% for p in people %}
 				<option value="{{ p.id }}">{{ p.Name }} ({{ p.kerberos }})</option>
-			{{ endfor }}
+			{% endfor %}
 		</select>
 	</div>
 
