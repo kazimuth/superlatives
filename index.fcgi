@@ -10,13 +10,15 @@ from __future__ import print_function
 from threading import Thread
 import json
 import base64
+import requests
+import uuid
 
+from requests.auth import HTTPBasicAuth
 from flup.server.fcgi import WSGIServer
-from flask import Flask, session, redirect, render_template
+from flask import Flask, session, redirect, render_template, request
 from flask_sqlalchemy import SQLAlchemy
-
-# to satisy pylint
-request = None
+from oic.oic import Client
+from oic.utils.authn.client import CLIENT_AUTHN_METHOD
 
 def log(fmt, *args):
     from sys import stderr
@@ -27,6 +29,7 @@ with open('secrets/secrets.json') as sf:
     SQL_USER = data['sql_user']
     SQL_PASS = data['sql_pass']
     FLASK_SECRET_KEY = data['secret_key']
+    DOMAIN = data['domain']
 with open('secrets/client_secrets.json') as sf:
     data = json.load(sf)
     CLIENT_ID = data['web']['client_id']
@@ -44,27 +47,92 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
+def rndstr():
+    return uuid.uuid4().hex
+
+# gross oidc stuff
+@app.route('/login')
+def login_page():
+    # Check if already logged in
+    if 'email' in session:
+        return redirect('/superlatives')
+
+    client = Client(client_authn_method=CLIENT_AUTHN_METHOD)
+    error = None
+
+    if "code" in request.args and "state" in request.args and request.args["state"] == session["state"]:
+        log('{} {} {} {}', 'https://oidc.mit.edu/token', CLIENT_ID, CLIENT_SECRET, {"grant_type": "authorization_code", "code": request.args["code"], "redirect_uri": DOMAIN+'/login'})
+        r = requests.post('https://oidc.mit.edu/token', auth=HTTPBasicAuth(CLIENT_ID, CLIENT_SECRET),
+                          data={"grant_type": "authorization_code",
+                                "code": request.args["code"],
+                                "redirect_uri": DOMAIN+'/login'})
+        log('request: code {}, text {}', request.args["code"], r.text)
+        auth_token = json.loads(r.text)["access_token"]
+        r = requests.get('https://oidc.mit.edu/userinfo', headers={"Authorization": "Bearer " + auth_token})
+        user_info = json.loads(r.text)
+
+        if "email" in user_info and user_info["email_verified"] is True and user_info["email"].endswith("@mit.edu"):
+            # Authenticated
+            email = user_info["email"]
+
+            user = User.query.filter_by(email=email).first()
+            if user is None:
+                user = User(email=email)
+                db.session.add(user)
+                db.session.commit()
+
+            session['email'] = email
+            return redirect('/superlatives')
+        else:
+            if not "email" in user_info:
+                error = "We need your email to work."
+            else:
+                error = "Invalid Login."
+
+    session["state"] = rndstr()
+    session["nonce"] = rndstr()
+
+    args = {
+        "client_id": CLIENT_ID,
+        "response_type": ["code"],
+        "scope": ["email", "openid", "profile"],
+        "state": session["state"],
+        "nonce": session["nonce"],
+        "redirect_uri": DOMAIN+'/login'
+    }
+
+    log('set state: {}', session["state"])
+
+    auth_req = client.construct_AuthorizationRequest(request_args=args)
+    login_url = auth_req.request('https://oidc.mit.edu/authorize')
+
+    return render_template('login.html', login_url=login_url, error=error)
+
+def auth(route):
+    def route_d(*args, **kwargs):
+        if 'email' in session:
+            return route(*args, **kwargs)
+        return redirect('/login')
+
+    route_d.func_name = route.func_name
+    return route_d
+
 @app.route('/superlatives')
+@auth
 def main_page():
     return render_template('superlatives.html', people=Person.query.all())
 
 @app.route('/')
 def index():
-    return redirect('/superlatives', code=302)
-
-def rndstr():
-    import os
-    return base64.b64encode(os.urandom(64))
-
-@app.route('/login')
-def login_page():
-    return 'nice meme benbo'
+    return redirect('/login', code=302)
 
 @app.route('/api/people')
+@auth
 def people():
     return json.dumps(Person.query.all())
 
 @app.route('/api/person', methods=['POST'])
+@auth
 def person():
     data = json.loads(request.formdata)
     name = data['name']
@@ -75,10 +143,12 @@ def person():
     return '', 200
 
 @app.route('/api/superlatives')
+@auth
 def superlatives():
     return json.dumps(Superlative.query.all())
 
 @app.route('/api/superlative', methods=['POST'])
+@auth
 def superlative():
     data = json.loads(request.formdata)
     text = data['text']
@@ -89,6 +159,7 @@ def superlative():
     return '', 200
 
 @app.route('/api/vote', methods=['POST'])
+@auth
 def vote():
     data = json.loads(request.formdata)
     superlative = int(data['superlative'])
@@ -98,7 +169,7 @@ def vote():
 class User(db.Model):
     __tablename__ = 'user'
     id = db.Column(db.Integer, primary_key=True)
-    kerberos = db.Column(db.String(128), nullable=False)
+    email = db.Column(db.String(128), nullable=False)
 
 class Person(db.Model):
     __tablename__ = 'people'
@@ -145,6 +216,7 @@ def die_on_change():
     import sys
     import time
     start = os.path.getmtime('./index.fcgi')
+    log('start: {}', start)
     while True:
         time.sleep(1)
         current = os.path.getmtime('./index.fcgi')

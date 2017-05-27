@@ -13,8 +13,3 @@
    RewriteCond %{REQUEST_FILENAME} !-f
    RewriteRule ^(.*)$ index.fcgi/$1 [QSA,L]
 </IfModule>
-
-<Location /login>
-   SSLOptions +StdEnvVars
-   SSLVerifyClient require
-</Location>
