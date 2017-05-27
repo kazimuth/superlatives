@@ -65,7 +65,6 @@ def login_page():
                           data={"grant_type": "authorization_code",
                                 "code": request.args["code"],
                                 "redirect_uri": DOMAIN+'/login'})
-        log('request: code {}, text {}', request.args["code"], r.text)
         auth_token = json.loads(r.text)["access_token"]
         r = requests.get('https://oidc.mit.edu/userinfo', headers={"Authorization": "Bearer " + auth_token})
         user_info = json.loads(r.text)
@@ -73,7 +72,6 @@ def login_page():
         if "email" in user_info and user_info["email_verified"] is True and user_info["email"].endswith("@mit.edu"):
             # Authenticated
             email = user_info["email"]
-
             user = User.query.filter_by(email=email).first()
             if user is None:
                 user = User(email=email)
@@ -99,8 +97,6 @@ def login_page():
         "nonce": session["nonce"],
         "redirect_uri": DOMAIN+'/login'
     }
-
-    log('set state: {}', session["state"])
 
     auth_req = client.construct_AuthorizationRequest(request_args=args)
     login_url = auth_req.request('https://oidc.mit.edu/authorize')
