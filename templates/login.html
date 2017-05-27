@@ -1,25 +1,35 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<meta charset="UTF-8">
-	<title>superlatives &middot; πτz</title>
-	<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.2.10/semantic.min.css">
-	<link rel="stylesheet" href="/static/style.css">
-
+    <meta charset="UTF-8">
+    <title>superlatives &middot; πτz</title>
+    <link rel="stylesheet" href="/static/bulma.min.css">
+    <link rel="stylesheet" href="/static/style.css">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 </head>
 <body>
-	<h1 class="centered">πτz Superlatives</h1>
-
-    {% if error %}
-        <h2 class="error">{{ error }}</h2>
-    {% else %}
-        {% if login_url %}
-            <a href="{{ login_url }}">Login you fuck</a>
-        {% endif %}
-    {% endif %} 
-
-	<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
-	<script src="//cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.2.10/semantic.min.js"></script>
+    <section class="section">
+        <div class="container">
+            <h1 class="title">πτz superlatives</h1>
+        </div>
+    </section>
+    <section class="section">
+            {% if error %}
+                <div class="columns"><div class="column is-4 is-offset-4">
+                    <div class="tile is-danger notification">
+                        <div class="container has-text-centered">
+                            <div class="subtitle no-space">{{ error }}</div>
+                            <p class="small">somebody bug james</p>
+                        </div>
+                    </div>
+                </div></div>
+            {% else %}
+                {% if login_url %}
+                    <div class="container has-text-centered">
+                        <a href="{{ login_url }}" class="button is-primary">login you fuck</a>
+                    </div>
+                {% endif %}
+            {% endif %} 
+    </section>
 </body>
 </html>

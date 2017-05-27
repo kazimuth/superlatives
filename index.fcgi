@@ -51,6 +51,10 @@ def rndstr():
     return uuid.uuid4().hex
 
 # gross oidc stuff
+# note: we're a SPA, except for login, which is, uh, odd
+# hope you're up for using multiple templating apis!
+# (login is rendered with flask, superlatives is rendered with Mithril.js on
+# the client side)
 @app.route('/login')
 def login_page():
     # Check if already logged in
@@ -122,7 +126,7 @@ def get_user():
 @app.route('/superlatives')
 @auth
 def main_page():
-    return render_template('superlatives.html', people=Person.query.all(), sups=[{'name': "beefiest", 'slots':3}])
+    return render_template('superlatives.html')
 
 @app.route('/')
 def index():
