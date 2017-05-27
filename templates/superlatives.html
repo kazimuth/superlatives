@@ -11,15 +11,24 @@
 <body>
 	<h1 class="centered">πτz Superlatives</h1>
 	
-	<div class="sup-container">
-		<h4 class="centered sup">Most Hacky</h4>
-		<select class="ui search dropdown">
-			{{ for p in people }}
-				<option value="{{ p.id }}">{{ p.Name }} ({{ p.kerberos }})</option>
-			{{ endfor }}
-		</select>
-	</div>
+	{% for s in sups %}
+		<div class="sup-container">
+			<h4 class="centered sup uwot">{{ s.name }}</h4>
+			{% for n in range(s.slots) %}
+				<select id="sup-{{ n }}" class="ui search dropdown c">
+					{% for p in people %}
+						<option value="{{ p.id }}">{{ p.name }} ({{ p.kerberos }})</option>
+					{% endfor %}
+				</select>
+				<br>
+			{% endfor %}
+		</div>
+	{% endfor %}
 
+	<!-- Note to potential hirer, I'm not that shitty irl -->
+	<button class="ui primary button sb center-this-shit ugh" style="margin-top: 1.2em;">
+  		Submit
+	</button>
 
 	<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
 	<script src="//cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.2.10/semantic.min.js"></script>
