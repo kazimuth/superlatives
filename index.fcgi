@@ -115,6 +115,10 @@ def auth(route):
     route_d.func_name = route.func_name
     return route_d
 
+def get_user():
+    '''Can only be called from auth routes.'''
+    return User.query.filter_by(email=session['email']).first()
+
 @app.route('/superlatives')
 @auth
 def main_page():
