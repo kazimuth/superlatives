@@ -61,7 +61,6 @@ def login_page():
     error = None
 
     if "code" in request.args and "state" in request.args and request.args["state"] == session["state"]:
-        log('{} {} {} {}', 'https://oidc.mit.edu/token', CLIENT_ID, CLIENT_SECRET, {"grant_type": "authorization_code", "code": request.args["code"], "redirect_uri": DOMAIN+'/login'})
         r = requests.post('https://oidc.mit.edu/token', auth=HTTPBasicAuth(CLIENT_ID, CLIENT_SECRET),
                           data={"grant_type": "authorization_code",
                                 "code": request.args["code"],
