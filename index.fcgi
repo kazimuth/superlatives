@@ -1,81 +1,144 @@
 #!/usr/bin/python
+
+'''Superlatives webapp for putz.'''
+
+# pylint: disable = missing-docstring,invalid-name,redefined-outer-name
+# pylint: disable = no-member,too-few-public-methods,redefined-builtin
+# pylint: disable = broad-except,line-too-long
+
 from __future__ import print_function
 from threading import Thread
+import json
+import base64
 
 from flup.server.fcgi import WSGIServer
-from flask import Flask, redirect, render_template
+from flask import Flask, session, redirect, render_template
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.engine.url import URL
 
-def get_mysql_url():
-    from ConfigParser import RawConfigParser
-    sql_ini_fileparser = RawConfigParser()
-    sql_ini_fileparser.read('../.sql/my.cnf')
-    user = sql_ini_fileparser.get('client', 'user')
-    password = sql_ini_fileparser.get('client', 'password')
-    return 'mysql://{}:{}@sql.mit.edu/superlatives'.format(user, password)
+# to satisy pylint
+request = None
+
+def log(fmt, *args):
+    from sys import stderr
+    print(fmt.format(*args), file=stderr)
+
+with open('secrets/secrets.json') as sf:
+    data = json.load(sf)
+    SQL_USER = data['sql_user']
+    SQL_PASS = data['sql_pass']
+    FLASK_SECRET_KEY = data['secret_key']
+with open('secrets/client_secrets.json') as sf:
+    data = json.load(sf)
+    CLIENT_ID = data['web']['client_id']
+    CLIENT_SECRET = data['web']['client_secret']
+
+del data
 
 app = Flask(__name__)
 app.debug = True
-app.config['SQLALCHEMY_DATABASE_URI'] = get_mysql_url()
+app.secret_key = FLASK_SECRET_KEY
+app.config['SQLALCHEMY_DATABASE_URI'] = \
+        'mysql://{}:{}@sql.mit.edu/jhgilles+superlatives' \
+        .format(SQL_USER, SQL_PASS)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
 @app.route('/superlatives')
 def main_page():
-    return render_template('superlatives.html', people=[{'id': 0, 'kerberos': 'shreyask', 'name': "Shreyas Kapur"},
-                                                        {'id': 1,' kerberos': 'ban', 'name': "Chetan Sharma"}])
+    return render_template('superlatives.html', people=Person.query.all())
 
 @app.route('/')
 def index():
     return redirect('/superlatives', code=302)
 
+def rndstr():
+    import os
+    return base64.b64encode(os.urandom(64))
+
+@app.route('/login')
+def login_page():
+    return 'nice meme benbo'
+
 @app.route('/api/people')
 def people():
-    return '[{"id": 0, "name": "Ryan Q Putz", "kerberos": "putz"}, {"id": 1, "name": "James Gilles", "kerberos": "jhgilles"}, {"id": 2, "name": "Shreyas Kapur", "kerberos": "shreyask"}]'
+    return json.dumps(Person.query.all())
 
 @app.route('/api/person', methods=['POST'])
 def person():
-    pass
+    data = json.loads(request.formdata)
+    name = data['name']
+    kerberos = data['kerberos']
+    p = Person(name, kerberos)
+    db.session.add(p)
+    db.session.commit()
+    return '', 200
 
 @app.route('/api/superlatives')
 def superlatives():
-    return '[{"id": 0, "superlative": "Most Hacky", "slots": 1}, {"id": 1, "superlative": "Most Likely to end up Starving in a Lifeboat", "slots": 4}]'
+    return json.dumps(Superlative.query.all())
 
 @app.route('/api/superlative', methods=['POST'])
 def superlative():
-    pass
+    data = json.loads(request.formdata)
+    text = data['text']
+    slots = int(data['slots'])
+    superlative = Superlative(text, slots)
+    db.session.add(superlative)
+    db.session.commit()
+    return '', 200
+
+@app.route('/api/vote', methods=['POST'])
+def vote():
+    data = json.loads(request.formdata)
+    superlative = int(data['superlative'])
+    people = data['people']
 
 # ORM
-from sqlalchemy import Column, Integer, String, ForeignKey
-from sqlalchemy.ext.declarative import declarative_base
+class User(db.Model):
+    __tablename__ = 'user'
+    id = db.Column(db.Integer, primary_key=True)
+    kerberos = db.Column(db.String(128), nullable=False)
 
-Base = declarative_base()
-
-class Person(Base):
+class Person(db.Model):
     __tablename__ = 'people'
-    id = Column(Integer, primary_key=True)
-    name = Column(String)
-    kerberos = Column(String)
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(256), unique=True, nullable=False)
+    kerberos = db.Column(db.String(128), unique=True, nullable=False)
 
-class Superlative(Base):
+    def __init__(self, name, kerberos):
+        self.name = name
+        self.kerberos = kerberos
+
+class Superlative(db.Model):
     __tablename__ = 'superlatives'
-    id = Column(Integer, primary_key=True)
-    name = Column(String)
-    slots = Column(Integer)
+    id = db.Column(db.Integer, primary_key=True)
+    text = db.Column(db.String(256), nullable=False)
+    slots = db.Column(db.Integer, nullable=False)
 
-class Vote(Base):
+    def __init__(self, text, slots):
+        self.text = text
+        self.slots = slots
+
+class Vote(db.Model):
     __tablename__ = 'votes'
-    id = Column(Integer, primary_key=True)
-    superlative = Column(Integer, ForeignKey('superlatives.id'))
+    id = db.Column(db.Integer, primary_key=True)
+    superlative = db.Column(db.Integer, db.ForeignKey('superlatives.id'), nullable=False)
+    user = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    entries = db.relationship('Entry', backref='votes')
 
-class Entry(Base):
+    def __init__(self, superlative):
+        self.superlative = superlative
+
+class Entry(db.Model):
     __tablename__ = 'entries'
-    id = Column(Integer, primary_key=True)
-    vote = Column(Integer, ForeignKey('votes.id'))
-    person = Column(Integer, ForeignKey('people.id'))
-    slot = Column(Integer)
+    id = db.Column(db.Integer, primary_key=True)
+    vote = db.Column(db.Integer, db.ForeignKey('votes.id'))
+    person = db.Column(db.Integer, db.ForeignKey('people.id'))
+
+    def __init__(self, vote, person):
+        self.vote = vote
+        self.person = person
 
 def die_on_change():
     import os.path
@@ -88,10 +151,6 @@ def die_on_change():
         if current > start:
             log('index modified, dying')
             sys.exit(0)
-
-def log(fmt, *args):
-    from sys import stderr
-    print(fmt.format(*args), file=stderr)
 
 if __name__ == '__main__':
     log('starting server...')
