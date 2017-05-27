@@ -115,7 +115,7 @@ def auth(route):
 @app.route('/superlatives')
 @auth
 def main_page():
-    return render_template('superlatives.html', people=Person.query.all())
+    return render_template('superlatives.html', people=Person.query.all(), sups=[{'name': "beefiest", 'slots':3}])
 
 @app.route('/')
 def index():
@@ -165,6 +165,7 @@ class User(db.Model):
     __tablename__ = 'user'
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(128), nullable=False)
+    votes = db.relationship('Vote')
 
 class Person(db.Model):
     __tablename__ = 'people'
@@ -191,7 +192,7 @@ class Vote(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     superlative = db.Column(db.Integer, db.ForeignKey('superlatives.id'), nullable=False)
     user = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    entries = db.relationship('Entry', backref='votes')
+    entries = db.relationship('Entry')
 
     def __init__(self, superlative):
         self.superlative = superlative
