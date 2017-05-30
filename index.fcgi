@@ -119,40 +119,76 @@ def auth(route):
     route_d.func_name = route.func_name
     return route_d
 
+def json_error(route):
+    def route_d(*args, **kwargs):
+        try:
+            return route(*args, **kwargs)
+        except Exception, e:
+            return jsonify({"error": str(e)}), 400
+
+    route_d.func_name = route.func_name
+    return route_d
+
 def get_user():
     '''Can only be called from auth routes.'''
     return User.query.filter_by(email=session['email']).first()
+
+@app.route('/')
+def index():
+    return redirect('/login', code=302)
 
 @app.route('/superlatives')
 @auth
 def main_page():
     return render_template('superlatives.html')
 
-@app.route('/')
-def index():
-    return redirect('/login', code=302)
-
 @app.route('/api/people')
 @auth
+@json_error
 def people():
+    '''
+    returns [{
+        "id": int,
+        "name": str,
+        "kerberos": str
+    }]
+    '''
     return jsonify([p.serialize() for p in Person.query.all()])
 
 @app.route('/api/person', methods=['POST'])
 @auth
+@json_error
 def person():
-    data = json.loads(request.formdata)
+    '''
+    {
+        "name": str,
+        "kerberos": str
+    }
+
+    returns same, with id
+    '''
+    data = request.get_json()
     name = data['name']
     kerberos = data['kerberos']
-    p = Person(name, kerberos)
-    db.session.add(p)
+    person = Person(name, kerberos)
+    db.session.add(person)
     db.session.commit()
-    return '', 200
+    return jsonify(person.serialize())
 
 @app.route('/api/superlatives')
 @auth
+@json_error
 def superlatives():
+    '''
+    returns [{
+        "id": int,
+        "text": str,
+        "slots": int,
+        "people"?: [int]
+    }]
+    '''
     superlatives = Superlative.query.all()
-    votes = Vote.query.filter_by(user=get_user().id)
+    votes = Vote.query.filter_by(user=get_user().id).all()
     votes = dict(((vote.superlative, vote) for vote in votes))
 
     results = []
@@ -166,23 +202,39 @@ def superlatives():
 
 @app.route('/api/superlative', methods=['POST'])
 @auth
+@json_error
 def superlative():
-    data = json.loads(request.formdata)
+    '''
+    {
+        "text": str,
+        "slots": int
+    }
+
+    returns same, with id
+    '''
+    data = request.get_json()
     text = data['text']
     slots = int(data['slots'])
     superlative = Superlative(text.lower(), slots)
     db.session.add(superlative)
     db.session.commit()
-    return '', 200
+    return jsonify(superlative.serialize())
 
 @app.route('/api/vote', methods=['POST'])
 @auth
+@json_error
 def vote():
-    data = json.loads(request.formdata)
+    '''
+    {
+        "superlative": int,
+        "people": [int]
+    }
+    '''
+    data = request.get_json()
     superlative = Superlative.query.get(int(data['superlative']))
     user = get_user()
 
-    people = sorted(set(data['people']))
+    people = sorted(data['people'])
 
     if len(people) != superlative.slots:
         return jsonify({
@@ -191,19 +243,28 @@ def vote():
             'got': len(people)
         }), 400
 
-    vote = Vote.query.filter_by(superlative=superlative, user=user)
+    vote = Vote.query.filter_by(superlative=superlative.id, user=user.id).first()
     if vote:
         for i in xrange(len(vote.entries)):
             vote.entries[i].person = people[i]
     else:
         # let's play spot the race condition
-        vote = Vote(superlative, user)
+        vote = Vote(superlative.id, user.id)
         db.session.add(vote)
         db.session.commit()
         for person in people:
-            entry = Entry(vote, person['id'])
-            db.session.add(person)
+            entry = Entry(vote.id, person)
+            db.session.add(entry)
     db.session.commit()
+
+    result = superlative.serialize()
+    result['people'] = []
+    for person in people:
+        result['people'].append(person)
+
+    print('result', json.dumps(result))
+
+    return jsonify(result)
     
 # ORM
 class User(db.Model):
@@ -241,12 +302,13 @@ class Superlative(db.Model):
     def serialize(self):
         return {'id': self.id, 'text': self.text, 'slots': self.slots}
 
+
 class Vote(db.Model):
     __tablename__ = 'votes'
     id = db.Column(db.Integer, primary_key=True)
     superlative = db.Column(db.Integer, db.ForeignKey('superlatives.id'), nullable=False)
     user = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    entries = db.relationship('Entry', lazy='joined')
+    entries = db.relationship('Entry', lazy='joined', order_by='Entry.id')
 
     def __init__(self, superlative, user):
         self.superlative = superlative
