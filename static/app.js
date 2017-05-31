@@ -73,6 +73,13 @@ Superlatives = {
       withCredentials: true
     })
     .then((result) => {
+      for (let i = 0; i < result.length; i++) {
+        if (_.some(result[i].people, _.isNull)) {
+          result[i].status = 'new';
+        } else {
+          result[i].status = 'committed';
+        }
+      }
       Superlatives.data = new Indexed(result);
     });
   },
@@ -97,7 +104,7 @@ Superlatives = {
     }
 
     sup.people[i] = person.id;
-    sup.uptodate = false;
+    sup.status = 'loading';
 
     if (!_.some(sup.people, _.isNull)) {
       // run the vote
@@ -112,7 +119,7 @@ Superlatives = {
       })
       .then((result) => {
         Superlatives.data.add(result);
-        sup.uptodate = true;
+        result.status = 'committed';
       });
     }
   }
@@ -120,28 +127,29 @@ Superlatives = {
 
 let loading = true;
 let newperson = false;
-let newsuper = false;
+let newsuperlative = false;
 
 // view
 let App = {
   oninit: () => Promise.all([People.load(), Superlatives.load()]).then(() => loading = false),
   view: () => {
+    let cards = Superlatives.data.all.map((sup) => m(SupCard, { sup: sup }));
+    cards.push(m('.tile.notification',
+      m('button.button.is-light', { onclick: () => newsuperlative = true }, 'new superlative...')));
+
+    let columns = _.chunk(cards, Math.ceil(cards.length / 3))
+      .map(portion => m('.column.is-one-third', portion));
+
     return [
       m('section.section',
         m('.container.has-text-centered', [
           m('h1.title', 'πτz superlatives'),
-          loading ? m('button.button.is-loading.inline.is-link') : null
+          loading ? m('.button.is-loading.is-link', ' ') : null
         ])
       ),
-      m('section.section',
-        m('.columns',
-          m('.column.is-4',
-            Superlatives.data.all.map((sup) => m(SupCard, {sup: sup}))
-          )
-        )
-      ),
+      m('section.section', m('.columns', columns)),
       newperson ? m(NewPerson) : null,
-      newsuper  ? m(NewSuper)  : null
+      newsuperlative ? m(NewSuperlative) : null
     ];
   }
 };
@@ -151,9 +159,16 @@ let SupCard = {
   view: (vnode) => {
     let sup = vnode.attrs.sup;
 
+    let marker;
+    if (sup.status == 'committed') {
+      marker = m('.is-pulled-right', '✓');
+    } else if (sup.status == 'loading') {
+      marker = m('.loader.is-pulled-right');
+    }
+
     return m('.tile.notification', { class: colors[sup.id % colors.length], key: sup.id }, 
       m('.container', [
-        m('p.subtitle', sup.text),
+        m('p.subtitle', [sup.text, marker]),
         _.range(sup.slots).map(i => 
           m(PersonAutocomplete, { sup: sup, i: i })
         )
@@ -204,7 +219,7 @@ let PersonAutocomplete = {
               onmousedown: () => {
                 state.text = null;
                 state.focus = false;
-                Superlatives.vote(vnode.attrs.sup, vnode.attrs.i, person);
+                return Superlatives.vote(vnode.attrs.sup, vnode.attrs.i, person);
               }
             }, m(PersonTag, { person: person }));
           }),
@@ -223,7 +238,9 @@ let PersonAutocomplete = {
         state.focus = true;
       };
 
-      return m('.field', m('.input', { onclick: onclick }, m(PersonTag, { person: person })));
+      return m('.field', m('.input', {
+        onclick: onclick,
+      }, m(PersonTag, { person: person })));
     }
   }
 };
@@ -300,11 +317,45 @@ let NewPerson = {
   }
 };
 
-let NewSuper = {
-  oninit: () => {
-
+let NewSuperlative = {
+  oninit: (vnode) => {
+    vnode.state.text = '';
+    vnode.state.slots = 1;
   },
-  view: () => {
+  view: (vnode) => {
+    return m(AddModal, 
+      {
+        title: 'add superlative',
+        onclose: () => newsuperlative = false,
+        onfinish: () => {
+          newsuperlative = false;
+          return Superlatives.add(vnode.state.text, vnode.state.slots);
+        },
+        valid: vnode.state.text != ''
+      },
+      [
+        m('.field', [
+          m('label.label', 'superlative'),
+          m('input.input', {
+            value: vnode.state.text,
+            spellcheck: false,
+            oninput: m.withAttr("value", (value) => vnode.state.text = value.toLowerCase()),
+            autocomplete: "off",
+            autocorrect: "off",
+            autocapitalize: "off",
+          }),
+        ]),
+        m('.field', [
+          m('label.label', 'slots'),
+          m('p.control', m('span.select', m('select', {oninput: m.withAttr('value', (value) => vnode.state.slots = Number(value))}, [
+            m('option', 1),
+            m('option', 2),
+            m('option', 3),
+            m('option', 4)
+          ])))
+        ])
+      ]
+    );
   }
 };
 

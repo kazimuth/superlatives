@@ -220,7 +220,9 @@ def superlative():
     superlative = Superlative(text.lower(), slots)
     db.session.add(superlative)
     db.session.commit()
-    return jsonify(superlative.serialize())
+    ser = superlative.serialize()
+    ser['people'] = [None for _ in xrange(slots)]
+    return jsonify(ser)
 
 @app.route('/api/vote', methods=['POST'])
 @auth
