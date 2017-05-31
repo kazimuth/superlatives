@@ -106,7 +106,7 @@ Superlatives = {
     sup.people[i] = person.id;
     sup.status = 'loading';
 
-    if (person.kerberos == 'dstrawser') {
+    if (person.kerberos == 'dstrawse') {
       danning = true;
       setTimeout(() => {
         danning = false;
