@@ -1,34 +1,34 @@
-.centered {
-	display: flex;
-	justify-content: center;
-	padding-top: 1.1em;
+ul.options-list {
+  display: flex;
+  flex-direction: column;
+  margin-top: -4px;
+  border: 1px solid #dbdbdb;
+  border-radius: 0 0 3px 3px;
+  position: absolute;
+  width: 100%;
+  overflow: hidden;
+  z-index: 5;
 }
 
-.sup-container {
-	text-align: center;
+ul.options-list li {
+  width: 100%;
+  flex-wrap: wrap;
+  background: white;
+  margin: 0;
+  border-bottom: 1px solid #eee;
+  color: #363636;
+  padding: 7px;
+  cursor: pointer;
 }
 
-.sup {
-	padding-bottom: 1.1em;	
+ul.options-list li:focus {
+  background: #f8f8f8;
+  outline:0;
 }
-
-.c {
-	margin: 0 auto;
-	width: 200px;
-	margin-top: 1.1em;
+ul.options-list li.new {
+  background: #ddd;
 }
-
-.uwot {
-	padding-top: 1.2em;
-    padding-bottom: 0;
-    margin-bottom: 0;
-}
-
-.sb {
-	margin-top: 1.2em;
-	text-align: center;
-}
-
-body {
-	text-align: center;
+ul.options-list li.new:focus {
+  background: #ccc;
+  outline:0;
 }

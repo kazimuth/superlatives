@@ -170,7 +170,7 @@ def person():
     data = request.get_json()
     name = data['name']
     kerberos = data['kerberos']
-    person = Person(name, kerberos)
+    person = Person(name.lower(), kerberos.lower())
     db.session.add(person)
     db.session.commit()
     return jsonify(person.serialize())
@@ -196,6 +196,8 @@ def superlatives():
         ser = sup.serialize()
         if sup.id in votes:
             ser['people'] = [entry.person for entry in votes[sup.id].entries]
+        else:
+            ser['people'] = [None for _ in xrange(sup.slots)]
         results.append(ser)
 
     return jsonify(results)
@@ -234,7 +236,7 @@ def vote():
     superlative = Superlative.query.get(int(data['superlative']))
     user = get_user()
 
-    people = sorted(data['people'])
+    people = data['people']
 
     if len(people) != superlative.slots:
         return jsonify({
@@ -261,8 +263,6 @@ def vote():
     result['people'] = []
     for person in people:
         result['people'].append(person)
-
-    print('result', json.dumps(result))
 
     return jsonify(result)
     
