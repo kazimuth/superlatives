@@ -106,6 +106,14 @@ Superlatives = {
     sup.people[i] = person.id;
     sup.status = 'loading';
 
+    if (person.kerberos == 'dstrawser') {
+      danning = true;
+      setTimeout(() => {
+        danning = false;
+        m.redraw();
+      }, 1000);
+    }
+
     if (!_.some(sup.people, _.isNull)) {
       // run the vote
       return m.request({
@@ -128,6 +136,7 @@ Superlatives = {
 let loading = true;
 let newperson = false;
 let newsuperlative = false;
+let danning = false;
 
 // view
 let App = {
@@ -149,7 +158,8 @@ let App = {
       ),
       m('section.section', m('.columns', columns)),
       newperson ? m(NewPerson) : null,
-      newsuperlative ? m(NewSuperlative) : null
+      newsuperlative ? m(NewSuperlative) : null,
+      danning ? m('.dan') : null
     ];
   }
 };
