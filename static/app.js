@@ -140,7 +140,7 @@ let danning = false;
 
 // view
 let App = {
-  oninit: () => Promise.all([People.load(), Superlatives.load()]).then(() => loading = false),
+  oninit: () => People.load().then(Superlatives.load).then(() => loading = false),
   view: () => {
     let cards = Superlatives.data.all.map((sup) => m(SupCard, { sup: sup }));
     cards.push(m('.tile.notification',
